@@ -505,7 +505,11 @@ function installHint(closable) {
 // ---------- スキャンPDFの向き直し（1回だけ・管理者が開いたときに自動で進める） ----------
 function autoFix(retry) {
   var f = S.data && S.data.fix;
-  if (!f || !(f.left || retry) || autoFix.running) return;
+  if (!f || autoFix.running) return;
+  if (!f.left && !retry) {   // 開き直したときも、直せなかったファイルがあれば知らせる
+    if (f.failed.length) fixLine('向きを直しました（' + f.ok + '/' + f.total + '）。直せなかったファイルが ' + f.failed.length + ' 件あります（' + f.failed[0].error + '）。', true);
+    return;
+  }
   autoFix.running = true;
   var step = function () {
     fixLine('受給者証PDFの向きを直しています… ' + f.ok + '/' + f.total + '（このまま使えます）');
