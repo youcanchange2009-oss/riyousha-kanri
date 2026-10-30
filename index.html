@@ -169,10 +169,16 @@ function api(op, args, extra) {
     credentials: 'omit', cache: 'no-store', redirect: 'follow', signal: ctl ? ctl.signal : undefined
   }).then(function (r) {
     return r.text().then(function (t) {
-      try { return JSON.parse(t); } catch (e) { throw new Error('データ係から返事がありませんでした（' + r.status + '）。少し待って、もう一度ためしてください。'); }
+      try { return JSON.parse(t); } catch (x) {
+        var e = new Error('データ係から返事がありませんでした（' + r.status + '）。少し待って、もう一度ためしてください。');
+        e.net = true;
+        throw e;
+      }
     });
   }, function () {
-    throw new Error('つながりませんでした。電波のよいところで、もう一度ためしてください。');
+    var e = new Error('つながりませんでした。電波のよいところで、もう一度ためしてください。');
+    e.net = true;
+    throw e;
   }).then(function (j) {
     clearTimeout(timer);
     if (j.ok) return j.value;
@@ -503,29 +509,41 @@ function installHint(closable) {
 }
 
 // ---------- スキャンPDFの向き直し（1回だけ・管理者が開いたときに自動で進める） ----------
+/**
+ * 直せなかったファイル（調べたあとで中身が変わっていたものは除く。そうしたファイルは前の版のデータ係が同じ表で
+ * 先に直したもので、もう一度直す必要はない。違う向きなら、画面の「この向きで保存」で1件ずつ直せる）。
+ */
+function fixFailed(f) {
+  return f.failed.filter(function (x) { return !/変わっている/.test(x.error); });
+}
 function autoFix(retry) {
   var f = S.data && S.data.fix;
   if (!f || autoFix.running) return;
   if (!f.left && !retry) {   // 開き直したときも、直せなかったファイルがあれば知らせる
-    if (f.failed.length) fixLine('向きを直しました（' + f.ok + '/' + f.total + '）。直せなかったファイルが ' + f.failed.length + ' 件あります（' + f.failed[0].error + '）。', true);
+    var bad = fixFailed(f);
+    if (bad.length) fixLine('向きを直しました。直せなかったファイルが ' + bad.length + ' 件あります（' + bad[0].error + '）。', true);
     return;
   }
   autoFix.running = true;
+  var misses = 0;
   var step = function () {
     fixLine('受給者証PDFの向きを直しています… ' + f.ok + '/' + f.total + '（このまま使えます）');
     api('fixScans', [!!retry]).then(function (r) {
-      retry = false;
+      retry = false; misses = 0;
       f = S.data.fix = r;
       if (r.left) return step();
       autoFix.running = false;
       SCANS = {};
-      fixLine(r.failed.length ? '向きを直しました（' + r.ok + '/' + r.total + '）。直せなかったファイルが ' + r.failed.length + ' 件あります（' + r.failed[0].error + '）。' : '', r.failed.length > 0);
-      toast('受給者証PDFの向きを直しました（' + r.ok + '/' + r.total + '）');
+      var bad = fixFailed(r);
+      fixLine(bad.length ? '向きを直しました。直せなかったファイルが ' + bad.length + ' 件あります（' + bad[0].error + '）。' : '', bad.length > 0);
+      toast('受給者証PDFの向きを直しました');
       render();
     }, function (e) {
+      if (e.login) { autoFix.running = false; return showLogin(errText(e)); }
+      // ほかの端末が直している最中（順番待ち）や、電波が一瞬切れたときは、待つだけの表示のまま少しあとで続ける
+      if (/向きを直しているところ/.test(errText(e)) || (e.net && ++misses <= 3)) return setTimeout(step, 8000);
       autoFix.running = false;
-      if (e.login) return showLogin(errText(e));
-      fixLine('向き直しは途中です（' + f.ok + '/' + f.total + '）。' + errText(e), true);
+      fixLine('向き直しが途中で止まりました（' + f.ok + '/' + f.total + '）。' + errText(e), true);
     });
   };
   step();
