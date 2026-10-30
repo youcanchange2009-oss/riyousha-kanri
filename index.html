@@ -132,7 +132,7 @@ body.out #tabs, body.out .tools { display: none; }
 </head>
 <body>
 <header>
-  <div class="bar"><div class="ttl">じょいん 利用者管理</div><div class="tools"><div class="who" id="who"></div><button class="reload" id="reload" title="シートから読み直す">↻ <span id="stamp"></span></button></div></div>
+  <div class="bar"><div class="ttl">かなめ 利用者管理</div><div class="tools"><div class="who" id="who"></div><button class="reload" id="reload" title="シートから読み直す">↻ <span id="stamp"></span></button></div></div>
   <nav id="tabs">
     <button data-v="search" class="on">さがす</button>
     <button data-v="alert">期限<span id="alertCount"></span></button>
@@ -149,7 +149,7 @@ body.out #tabs, body.out .tools { display: none; }
 // データ係（江島さんの Google アカウントで動くスクリプト）。個人のデータはここからだけ届き、このページには置かない。
 var API = 'https://script.google.com/macros/s/AKfycbxF1LZbOPRPZChjpP7WFMp2-fw2530a3y15T4kKyUzK47qmh2ucVJ6nodvXC5L-_PXm9Q/exec';
 var OLD_APP = 'https://script.google.com/macros/s/AKfycbzNVFoB3peaDUPW1hWqQNdozJGvt0tioCjECcSoMiJsK9x5ZMyRL2TQnCVj0W9a0dLlCQ/exec';
-var PAGE_VER = '5df7a3d8f8';   // この画面の版。公開されている版とちがえば、画面を読み直して新しい版にする
+var PAGE_VER = 'e590ddd9f4';   // この画面の版。公開されている版とちがえば、画面を読み直して新しい版にする
 
 /**
  * 画面の新しい版が公開されていれば読み直す（ホーム画面のアイコンから開くと、ブラウザの読み直しボタンがないため）。
@@ -452,7 +452,7 @@ function showLogin(msg) {
   var sent = Number(store.get('rk_sent') || 0);
   var waiting = email && Date.now() - sent < 10 * 60 * 1000;
   document.getElementById('main').innerHTML = '<div class="login">' +
-    '<img class="licon" src="icon-192.png" alt=""><h1>じょいん 利用者管理</h1>' +
+    '<img class="licon" src="icon-192.png" alt=""><h1>かなめ 利用者管理</h1>' +
     (msg ? '<div class="error">' + esc(msg) + '</div>' : '') +
     '<div class="panel" id="step1"' + (waiting ? ' hidden' : '') + '>' +
       '<label for="lg_email">登録してあるメールアドレス</label>' +
