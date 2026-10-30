@@ -149,7 +149,7 @@ body.out #tabs, body.out .tools { display: none; }
 // データ係（江島さんの Google アカウントで動くスクリプト）。個人のデータはここからだけ届き、このページには置かない。
 var API = 'https://script.google.com/macros/s/AKfycbxF1LZbOPRPZChjpP7WFMp2-fw2530a3y15T4kKyUzK47qmh2ucVJ6nodvXC5L-_PXm9Q/exec';
 var OLD_APP = 'https://script.google.com/macros/s/AKfycbzNVFoB3peaDUPW1hWqQNdozJGvt0tioCjECcSoMiJsK9x5ZMyRL2TQnCVj0W9a0dLlCQ/exec';
-var PAGE_VER = '5d48e42b02';   // この画面の版。公開されている版とちがえば、画面を読み直して新しい版にする
+var PAGE_VER = '5df7a3d8f8';   // この画面の版。公開されている版とちがえば、画面を読み直して新しい版にする
 
 /**
  * 画面の新しい版が公開されていれば読み直す（ホーム画面のアイコンから開くと、ブラウザの読み直しボタンがないため）。
@@ -397,7 +397,7 @@ function setData(d) {
   d.list = d.persons.map(function (p) {
     var g = d.guardians[p.gid] || {}, cs = cardsBy[p.id] || [], nos = [];
     cs.forEach(function (c) { if (c.no && nos.indexOf(c.no) < 0) nos.push(c.no); });
-    return { id: p.id, name: p.name, kana: p.kana, kubun: p.kubun, status: p.status, expiry: p.expiry, state: p.state, check: needCheck(p),
+    return { id: p.id, name: p.name, kana: p.kana, kubun: p.kubun, expiry: p.expiry, state: p.state, check: needCheck(p),
       gname: g.name || '', gkana: g.kana || '', nos: nos.join(' '), pdf: mainPdf(cs) };
   });
   S.data = d;
@@ -626,7 +626,7 @@ function render() {
 
 // ---------- さがす ----------
 function renderSearch() {
-  var chips = ['すべて', '期限切れ', '1か月以内', '利用中', '未確認', '要確認'];
+  var chips = ['すべて', '期限切れ', '1か月以内', '要確認'];
   document.getElementById('main').innerHTML =
     '<div class="fixbar" id="fixbar"' + (S.fixText ? '' : ' hidden') + '>' + esc(S.fixText || '') + '</div>' + installHint(true) +
     '<input class="search" id="q" type="search" placeholder="名前・ふりがな・受給者証番号・保護者名" value="' + esc(S.q) + '">' +
@@ -651,7 +651,6 @@ function drawList() {
   var rows = S.data.list.filter(function (p) {
     if (S.filter === '要確認') { if (!p.check) return false; }
     else if (S.filter === '期限切れ' || S.filter === '1か月以内') { if (p.state !== S.filter) return false; }
-    else if (S.filter !== 'すべて' && p.status !== S.filter) return false;
     if (!key) return true;
     return norm([p.id, p.name, p.kana, p.gname, p.gkana, p.nos].join(' ')).indexOf(key) >= 0;
   }).sort(function (a, b) { return norm(a.kana || a.name).localeCompare(norm(b.kana || b.name), 'ja'); });
@@ -710,7 +709,7 @@ function drawPerson(d) {
     h += '<div class="muted" style="margin-top:6px">受給者証のPDFはまだつないでいません。</div>';
   }
   h += '<dl style="margin-top:10px">' +
-    field('生年月日', p.birth) + field('区分', p.kubun) + field('利用の状態', p.status) +
+    field('生年月日', p.birth) + field('区分', p.kubun) +
     field('利用開始日', p.start) + field('利用終了日', p.end) + field('いちばん近い期限', p.expiry) + field('備考', p.note) + '</dl>';
   if (d.siblings.length) {
     h += '<div class="act">きょうだい：' + d.siblings.map(function (s) {
@@ -801,10 +800,9 @@ function adminHtml(d) {
       '<div><button class="btn solid" id="c_save">足す</button></div></div></details>';
 }
 // ---------- 修正（管理者だけ） ----------
-var STATUS = ['未確認', '利用中', '契約前', '休止中', '終了'];
 var P_FIELDS = [
   { k: '氏名', v: 'name' }, { k: 'ふりがな', v: 'kana' }, { k: '生年月日', v: 'birth', ph: '平成25年12月14日' },
-  { k: '区分', v: 'kubun', opts: ['児童', '大人'] }, { k: '利用の状態', v: 'status', opts: STATUS },
+  { k: '区分', v: 'kubun', opts: ['児童', '大人'] },
   { k: '利用開始日', v: 'start', ph: '2026/11/01' }, { k: '利用終了日', v: 'end' }, { k: '備考', v: 'note', area: true }];
 var G_FIELDS = [
   { k: '氏名', v: 'name' }, { k: 'ふりがな', v: 'kana' }, { k: '続柄', v: 'rel', ph: '母・父など' },
