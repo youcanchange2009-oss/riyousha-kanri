@@ -8,8 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="利用者管理">
 <meta name="application-name" content="利用者管理">
 <meta name="theme-color" content="#1f3a70">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://youcanchange2009-oss.github.io/riyousha-kanri/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="manifest" href="manifest.json">
@@ -17,17 +16,21 @@
 // 利用者管理（Google のウェブアプリ）への入口。ホーム画面・Dock のアイコンをこのページで持つ。
 var APP = 'https://script.google.com/macros/s/AKfycbzNVFoB3peaDUPW1hWqQNdozJGvt0tioCjECcSoMiJsK9x5ZMyRL2TQnCVj0W9a0dLlCQ/exec';
 (function () {
+  var ua = navigator.userAgent;
+  var ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
   var standalone = window.navigator.standalone === true ||
     (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   var nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
   var cameBack = nav.type === 'back_forward';
-  // ホーム画面のアイコンから開いたとき（URL に ?launch が付く）は、すぐに画面へ進む
-  if (standalone || (/[?&]launch\b/.test(location.search) && !cameBack)) {
+  var launch = /[?&]launch\b/.test(location.search);
+  // ホーム画面のアイコンから開いたときだけ、すぐに画面へ進む。
+  // iPhone は「アプリとして開いた」ときだけ進む（Safari のタブでは進まない。ここで「ホーム画面に追加」してもらうため）
+  if (standalone || (!ios && launch && !cameBack)) {
     location.replace(APP);
     return;
   }
-  // 初めて開いたときは、この画面のまま「ホーム画面に追加」してもらう。追加されるURLに ?launch を付けておく
-  try { history.replaceState(null, '', location.pathname + '?launch'); } catch (e) {}
+  // Android・PC は、追加されるURLに ?launch を付けておく。iPhone は付けない（Safari の履歴から開き直しても飛ばないように）
+  try { history.replaceState(null, '', location.pathname + (ios ? '' : '?launch')); } catch (e) {}
 })();
 window.addEventListener('pageshow', function (e) { if (e.persisted) document.body.classList.add('back'); });
 </script>
@@ -48,6 +51,7 @@ window.addEventListener('pageshow', function (e) { if (e.persisted) document.bod
   .card p { font-size: 14px; line-height: 1.7; margin: 6px 0; }
   .card b { color: var(--navy); }
   .hide { display: none; }
+  .ver { margin-top: 20px; color: #9aa3b2; font-size: 11px; }
 </style>
 </head>
 <body>
@@ -64,6 +68,7 @@ window.addEventListener('pageshow', function (e) { if (e.persisted) document.bod
     <p class="pc hide">この画面のまま、Chrome の右上︙ →「キャスト、保存、共有」→ <b>「ページをアプリとしてインストール」</b>（ない場合は「ショートカットを作成」）→「インストール」（または「作成」）。Mac は開いている間に Dock のアイコンを右クリック →「オプション」→「Dockに追加」。</p>
     <p>紺色の「利用者管理」アイコンができます。次からはそのアイコンを押すと、すぐ画面が開きます。</p>
   </div>
+  <p class="ver">2026-10-30 版2</p>
 </main>
 <script>
   document.getElementById('open').href = APP;
