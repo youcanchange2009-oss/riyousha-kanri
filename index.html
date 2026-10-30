@@ -515,7 +515,7 @@ function autoFix(retry) {
       if (r.left) return step();
       autoFix.running = false;
       SCANS = {};
-      fixLine(r.failed.length ? '向きを直しました（' + r.ok + '/' + r.total + '）。直せなかったファイルが ' + r.failed.length + ' 件あります。' : '', r.failed.length > 0);
+      fixLine(r.failed.length ? '向きを直しました（' + r.ok + '/' + r.total + '）。直せなかったファイルが ' + r.failed.length + ' 件あります（' + r.failed[0].error + '）。' : '', r.failed.length > 0);
       toast('受給者証PDFの向きを直しました（' + r.ok + '/' + r.total + '）');
       render();
     }, function (e) {
