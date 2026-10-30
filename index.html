@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -7,77 +7,851 @@
 <title>利用者管理</title>
 <meta name="apple-mobile-web-app-title" content="利用者管理">
 <meta name="application-name" content="利用者管理">
-<meta name="theme-color" content="#1f3a70">
+<meta name="theme-color" content="#ffffff">
 <link rel="apple-touch-icon" sizes="180x180" href="https://youcanchange2009-oss.github.io/riyousha-kanri/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="manifest" href="manifest.json">
-<script>
-// 利用者管理（Google のウェブアプリ）への入口。ホーム画面・Dock のアイコンをこのページで持つ。
-var APP = 'https://script.google.com/macros/s/AKfycbzNVFoB3peaDUPW1hWqQNdozJGvt0tioCjECcSoMiJsK9x5ZMyRL2TQnCVj0W9a0dLlCQ/exec';
-(function () {
-  var ua = navigator.userAgent;
-  var ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-  var standalone = window.navigator.standalone === true ||
-    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-  var nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
-  var cameBack = nav.type === 'back_forward';
-  var launch = /[?&]launch\b/.test(location.search);
-  // ホーム画面のアイコンから開いたときだけ、すぐに画面へ進む。
-  // iPhone は「アプリとして開いた」ときだけ進む（Safari のタブでは進まない。ここで「ホーム画面に追加」してもらうため）
-  if (standalone || (!ios && launch && !cameBack)) {
-    location.replace(APP);
-    return;
-  }
-  // Android・PC は、追加されるURLに ?launch を付けておく。iPhone は付けない（Safari の履歴から開き直しても飛ばないように）
-  try { history.replaceState(null, '', location.pathname + (ios ? '' : '?launch')); } catch (e) {}
-})();
-window.addEventListener('pageshow', function (e) { if (e.persisted) document.body.classList.add('back'); });
-</script>
 <style>
-  :root { --navy: #1f3a70; --ink: #1d2433; --sub: #5b6475; --line: #dfe4ee; --bg: #f4f6fa; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink);
-    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", sans-serif;
-    -webkit-text-size-adjust: 100%; }
-  main { max-width: 440px; margin: 0 auto; padding: 32px 16px 40px; text-align: center; }
-  .icon { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 4px 14px rgba(31,58,112,.25); }
-  h1 { font-size: 22px; margin: 16px 0 4px; }
-  .lead { color: var(--sub); font-size: 14px; margin: 0 0 24px; }
-  .open { display: block; width: 100%; padding: 16px; border-radius: 12px; background: var(--navy); color: #fff;
-    font-size: 18px; font-weight: 700; text-decoration: none; }
-  .card { margin-top: 24px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; text-align: left; }
-  .card h2 { font-size: 15px; margin: 0 0 8px; }
-  .card p { font-size: 14px; line-height: 1.7; margin: 6px 0; }
-  .card b { color: var(--navy); }
-  .hide { display: none; }
-  .ver { margin-top: 20px; color: #9aa3b2; font-size: 11px; }
+:root {
+  --ink: #1d1d1f; --sub: #5f6368; --line: #dadce0; --bg: #f6f7f9; --card: #fff;
+  --accent: #b4231b; --accent-bg: #fff4f3;
+  --red: #c5221f; --red-bg: #fce8e6; --amber: #a05a00; --amber-bg: #fef3d6;
+  --green: #137333; --green-bg: #e6f4ea; --gray-bg: #eceff1;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Noto Sans CJK JP', sans-serif; font-size: 15px; line-height: 1.55; }
+header { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top); }
+.bar { max-width: 880px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ttl { font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.who { font-size: 12px; color: var(--sub); text-align: right; }
+.role { display: inline-block; padding: 0 6px; border-radius: 9px; font-size: 11px; font-weight: 700; margin-left: 4px; }
+.role.admin { background: var(--accent-bg); color: var(--accent); }
+.role.user { background: var(--gray-bg); color: var(--sub); }
+nav { max-width: 880px; margin: 0 auto; display: flex; padding: 0 8px; }
+nav button { flex: 1; border: 0; background: none; font: inherit; font-weight: 700; color: var(--sub); padding: 10px 0 9px; border-bottom: 3px solid transparent; cursor: pointer; }
+nav button.on { color: var(--accent); border-bottom-color: var(--accent); }
+.count { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 4px; border-radius: 10px; background: var(--red); color: #fff; font-size: 12px; }
+main { max-width: 880px; margin: 0 auto; padding: 12px 16px calc(48px + env(safe-area-inset-bottom)); }
+input, select, textarea { font: inherit; font-size: 16px; }
+.search { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 6px; }
+.chip { border: 1px solid var(--line); background: var(--card); border-radius: 16px; padding: 4px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); font-weight: 700; }
+.hint { font-size: 12px; color: var(--sub); margin: 4px 2px 8px; }
+.item { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+.item:active { background: #fafafa; }
+.item .main { flex: 1; min-width: 0; }
+.item .nm { font-weight: 700; }
+.item .kn { font-size: 12px; color: var(--sub); }
+.item .side { text-align: right; font-size: 12px; color: var(--sub); white-space: nowrap; }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 700; }
+.b-期限切れ { background: var(--red-bg); color: var(--red); }
+.b-1か月以内 { background: var(--amber-bg); color: var(--amber); }
+.b-2か月以内 { background: #fff8e1; color: #8a6d00; }
+.b-有効 { background: var(--green-bg); color: var(--green); }
+.b-旧証, .b-none { background: var(--gray-bg); color: var(--sub); }
+h2 { font-size: 15px; margin: 18px 0 8px; padding-left: 8px; border-left: 4px solid var(--ink); }
+.group-h { display: flex; justify-content: space-between; align-items: baseline; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+.back { border: 0; background: none; font: inherit; color: var(--accent); font-weight: 700; padding: 4px 0; cursor: pointer; }
+.pname { font-size: 20px; font-weight: 700; margin: 4px 0 0; }
+.pkana { color: var(--sub); font-size: 13px; }
+dl { display: grid; grid-template-columns: 8.5em 1fr; gap: 4px 10px; margin: 0; }
+dt { color: var(--sub); font-size: 13px; }
+dd { margin: 0; word-break: break-word; }
+.card-h { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; margin-bottom: 6px; }
+.card-h b { font-size: 14px; }
+.btn { display: inline-block; border: 1px solid var(--accent); color: var(--accent); background: var(--card); border-radius: 8px; padding: 7px 14px; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+.btn.solid { background: var(--accent); color: #fff; }
+.btn:disabled { opacity: .5; }
+.muted { color: var(--sub); font-size: 13px; }
+details > summary { cursor: pointer; color: var(--sub); font-size: 13px; margin: 6px 0; }
+.form { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
+.form label { font-size: 12px; color: var(--sub); display: block; }
+.form input, .form select, .form textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sib { color: var(--accent); cursor: pointer; text-decoration: underline; margin-right: 10px; }
+.act { border-top: 1px dashed var(--line); padding-top: 6px; margin-top: 6px; font-size: 13px; }
+#msg { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: #323232; color: #fff; padding: 9px 16px; border-radius: 8px; font-size: 14px; display: none; z-index: 9; max-width: 92vw; }
+.loading { text-align: center; color: var(--sub); padding: 40px 0; }
+.error { background: var(--red-bg); color: var(--red); border-radius: 10px; padding: 14px; }
+@media (min-width: 720px) {
+  .form.wide { grid-template-columns: 1fr 1fr; }
+  .cards2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cards2 .panel { margin-bottom: 0; }
+}
+.tools { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.reload { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; color: var(--sub); cursor: pointer; white-space: nowrap; }
+.pvbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.pv { margin-top: 8px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+.pname.link { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.b-check { background: var(--amber-bg); color: var(--amber); margin-left: 6px; vertical-align: 2px; }
+.btn.sm { padding: 3px 10px; font-size: 13px; }
+.panel { scroll-margin-top: 112px; }
+.edit-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+.edit-note { font-size: 12px; color: var(--sub); margin: 2px 0 6px; }
+.form textarea { min-height: 64px; }
+.pdfmark { display: inline-block; margin-left: 6px; padding: 0 5px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; font-weight: 700; color: var(--sub); vertical-align: 2px; }
+/* 受給者証の画像 */
+.pv-in { position: relative; background: #f1f3f4; min-height: 120px; cursor: zoom-in; }
+.pv-in .loading { padding: 40px 0; }
+.stage { position: relative; margin: 0 auto; overflow: hidden; }
+.stage img { position: absolute; left: 50%; top: 50%; max-width: none; transform-origin: center; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.pvtools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px; border-top: 1px solid var(--line); background: #fff; }
+.pvtools .muted { flex-basis: 100%; font-size: 12px; }
+.pv-err { padding: 16px; color: var(--red); font-size: 14px; }
+/* 大きく見る */
+#viewer { position: fixed; inset: 0; z-index: 20; background: #111; display: flex; flex-direction: column; }
+#viewer[hidden] { display: none; }
+.vbar { display: flex; gap: 8px; align-items: center; padding: calc(8px + env(safe-area-inset-top)) 10px 8px; background: #222; }
+.vbar button { border: 1px solid #555; background: #333; color: #fff; border-radius: 8px; padding: 7px 12px; font: inherit; font-weight: 700; cursor: pointer; }
+.vbar .vgap { flex: 1; }
+.vbox { flex: 1; overflow: auto; display: flex; -webkit-overflow-scrolling: touch; padding-bottom: env(safe-area-inset-bottom); }
+.vbox .stage { margin: auto; flex-shrink: 0; overflow: visible; }
+body.noscroll { overflow: hidden; }
+/* ログイン */
+body.out #tabs, body.out .tools { display: none; }
+.login { max-width: 420px; margin: 8px auto 0; }
+.login .licon { display: block; width: 72px; height: 72px; border-radius: 16px; margin: 8px auto 6px; }
+.login h1 { text-align: center; font-size: 20px; margin: 0 0 14px; }
+.login label { display: block; font-size: 13px; color: var(--sub); margin-bottom: 4px; }
+.login input { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; background: #fff; }
+.login #lg_code { font-size: 26px; letter-spacing: 8px; text-align: center; }
+.btn.wide { display: block; width: 100%; padding: 12px; font-size: 16px; }
+.links { display: flex; justify-content: space-between; margin-top: 10px; }
+.link { border: 0; background: none; color: var(--accent); font: inherit; font-size: 14px; text-decoration: underline; padding: 4px 0; cursor: pointer; }
+.login .error { margin-bottom: 10px; }
+.hintcard { background: #eef3fb; border: 1px solid #cfdcf3; border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.7; margin: 10px 0; }
+.hintcard b { color: #1f3a70; }
+.hintcard .link { font-size: 12px; float: right; }
+.fixbar { background: var(--amber-bg); color: var(--amber); border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-bottom: 10px; }
+.foot { margin-top: 24px; font-size: 12px; color: var(--sub); text-align: center; }
 </style>
 </head>
 <body>
-<main>
-  <img class="icon" src="icon-192.png" alt="">
-  <h1>じょいん 利用者管理</h1>
-  <p class="lead">ご自分のGoogleでログインして使います</p>
-  <a class="open" id="open" href="">利用者管理を開く</a>
+<header>
+  <div class="bar"><div class="ttl">じょいん 利用者管理</div><div class="tools"><div class="who" id="who"></div><button class="reload" id="reload" title="シートから読み直す">↻ <span id="stamp"></span></button></div></div>
+  <nav id="tabs">
+    <button data-v="search" class="on">さがす</button>
+    <button data-v="alert">期限<span id="alertCount"></span></button>
+  </nav>
+</header>
+<main id="main"><div class="loading">読み込んでいます…</div></main>
+<div id="msg"></div>
+<div id="viewer" hidden>
+  <div class="vbar"><button id="vClose">✕ とじる</button><span class="vgap"></span><button id="vRot">↻ 回す</button><button id="vOut">－</button><button id="vIn">＋</button></div>
+  <div class="vbox" id="vBox"><div class="stage" id="vStage"><img id="vImg" alt="受給者証"></div></div>
+</div>
 
-  <div class="card">
-    <h2>ホーム画面にアイコンを置く（はじめの1回だけ）</h2>
-    <p class="ios">この画面のまま、Safari の共有ボタン（□に↑）→ <b>「ホーム画面に追加」</b> →「追加」。</p>
-    <p class="android hide">この画面のまま、Chrome の右上︙ → <b>「ホーム画面に追加」</b> →「追加」。</p>
-    <p class="pc hide">この画面のまま、Chrome の右上︙ →「キャスト、保存、共有」→ <b>「ページをアプリとしてインストール」</b>（ない場合は「ショートカットを作成」）→「インストール」（または「作成」）。Mac は開いている間に Dock のアイコンを右クリック →「オプション」→「Dockに追加」。</p>
-    <p>紺色の「利用者管理」アイコンができます。次からはそのアイコンを押すと、すぐ画面が開きます。</p>
-  </div>
-  <p class="ver">2026-10-30 版2</p>
-</main>
 <script>
-  document.getElementById('open').href = APP;
-  var ua = navigator.userAgent;
-  var kind = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'ios'
-    : /Android/.test(ua) ? 'android' : 'pc';
-  ['ios', 'android', 'pc'].forEach(function (k) {
-    document.querySelector('.' + k).classList.toggle('hide', k !== kind);
+// データ係（江島さんの Google アカウントで動くスクリプト）。個人のデータはここからだけ届き、このページには置かない。
+var API = 'https://script.google.com/macros/s/AKfycbxF1LZbOPRPZChjpP7WFMp2-fw2530a3y15T4kKyUzK47qmh2ucVJ6nodvXC5L-_PXm9Q/exec';
+var OLD_APP = 'https://script.google.com/macros/s/AKfycbzNVFoB3peaDUPW1hWqQNdozJGvt0tioCjECcSoMiJsK9x5ZMyRL2TQnCVj0W9a0dLlCQ/exec';
+var S = { data: null, idx: null, view: 'search', q: '', filter: 'すべて', person: null, from: 'search', scroll: {}, restore: false, pdfOpen: true };
+
+/** この端末に覚えておくもの（ログインの合言葉とメールアドレスだけ）。 */
+var store = {
+  get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del: function (k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+
+/** データ係を呼ぶ。返事は Promise（うまくいけば value、だめなら Error。ログインが要るときは e.login）。 */
+function api(op, args, extra) {
+  var body = { op: op, token: store.get('rk_token') || '', args: args || [] };
+  Object.keys(extra || {}).forEach(function (k) { body[k] = extra[k]; });
+  var ctl = window.AbortController ? new AbortController() : null;
+  var timer = ctl ? setTimeout(function () { ctl.abort(); }, 90000) : 0;
+  return fetch(API, {
+    method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    credentials: 'omit', cache: 'no-store', redirect: 'follow', signal: ctl ? ctl.signal : undefined
+  }).then(function (r) {
+    return r.text().then(function (t) {
+      try { return JSON.parse(t); } catch (e) { throw new Error('データ係から返事がありませんでした（' + r.status + '）。少し待って、もう一度ためしてください。'); }
+    });
+  }, function () {
+    throw new Error('つながりませんでした。電波のよいところで、もう一度ためしてください。');
+  }).then(function (j) {
+    clearTimeout(timer);
+    if (j.ok) return j.value;
+    var e = new Error(j.error || 'うまくいきませんでした。');
+    e.login = !!j.login;
+    throw e;
+  }, function (e) { clearTimeout(timer); throw e; });
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
   });
+}
+function norm(s) {
+  return String(s || '')
+    .replace(/[ァ-ヶ]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0x60); })
+    .replace(/[０-９Ａ-Ｚａ-ｚ]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xfee0); })
+    .replace(/[\s　]/g, '').toLowerCase();
+}
+function badge(state) {
+  if (!state) return '<span class="badge b-none">期限なし</span>';
+  var cls = state.indexOf('旧証') >= 0 ? '旧証' : state;
+  return '<span class="badge b-' + esc(cls) + '">' + esc(state) + '</span>';
+}
+function toast(t) {
+  var m = document.getElementById('msg');
+  m.textContent = t; m.style.display = 'block';
+  clearTimeout(toast.t); toast.t = setTimeout(function () { m.style.display = 'none'; }, 2600);
+}
+function errText(e) { return (e && e.message) || String(e); }
+function call(fn, args, ok) {
+  api(fn, args).then(ok, function (e) {
+    [].forEach.call(document.querySelectorAll('button:disabled'), function (x) { x.disabled = false; });
+    if (e.login) return showLogin(errText(e));
+    toast(errText(e));
+  });
+}
+function fail(e) {
+  document.getElementById('main').innerHTML = '<div class="error">' + esc(errText(e)) + '</div>' +
+    '<div class="pvbar"><button class="btn solid" onclick="location.reload()">もう一度読み込む</button>' +
+    '<a class="btn" href="' + OLD_APP + '">前の画面（Google）で開く</a></div>';
+}
+
+// ---------- 受給者証PDF ----------
+function fileId(link) {
+  var s = String(link || '').trim();
+  var m = s.match(/\/d\/([\w-]{20,})/) || s.match(/[?&]id=([\w-]{20,})/) || s.match(/^([\w-]{20,})$/);
+  return m ? m[1] : '';
+}
+function pdfView(link) { return 'https://drive.google.com/file/d/' + fileId(link) + '/view'; }
+/** 受給者証の画像の入れ物。中身は fillScans() があとから入れる。 */
+function pdfFrame(link) {
+  return '<div class="pv" data-file="' + esc(fileId(link)) + '"><div class="pv-in"><div class="loading">受給者証の画像を読み込んでいます…</div></div></div>';
+}
+
+// 読んだ画像はこの画面を開いている間だけメモリに置く（端末には保存しない）。
+// rot＝画面で回している角度、saved＝ドライブのPDFと同じ向きになる角度（この差を「この向きで保存」で書く）。
+var SCANS = {};
+function fillScans(root) {
+  [].forEach.call((root || document).querySelectorAll('.pv[data-file]'), function (box) {
+    var id = box.getAttribute('data-file');
+    if (box.getAttribute('data-done')) return;
+    box.setAttribute('data-done', '1');
+    loadScan(id).then(function () { drawScan(box, id); }, function (e) {
+      if (e.login) return showLogin(errText(e));
+      box.querySelector('.pv-in').innerHTML = '<div class="pv-err">' + esc(errText(e)) + '</div>';
+      box.appendChild(scanTools(id, true));
+    });
+  });
+}
+function loadScan(id) {
+  if (SCANS[id]) return SCANS[id].ready;
+  var sc = SCANS[id] = { rot: 0 };
+  sc.ready = api('scan', [id]).then(function (r) {
+    return new Promise(function (ok, ng) {
+      var img = new Image();
+      img.onload = function () {
+        sc.url = img.src; sc.w = img.naturalWidth; sc.h = img.naturalHeight; sc.pages = r.pages;
+        sc.rot = sc.saved = r.turn || 0;
+        ok(sc);
+      };
+      img.onerror = function () { ng(new Error('画像を表示できませんでした。')); };
+      img.src = 'data:' + r.type + ';base64,' + r.data;
+    });
+  });
+  sc.ready.catch(function () { delete SCANS[id]; });
+  return sc.ready;
+}
+/** 回した向きで、幅 W・高さ H の枠に収まる大きさを決めて、画像を置く。 */
+function place(stage, img, sc, W, H, zoom) {
+  var turned = sc.rot % 180 !== 0;
+  var bw = turned ? sc.h : sc.w, bh = turned ? sc.w : sc.h;
+  var k = Math.min(W / bw, H ? H / bh : Infinity) * (zoom || 1);
+  stage.style.width = Math.round(bw * k) + 'px';
+  stage.style.height = Math.round(bh * k) + 'px';
+  img.style.width = Math.round(sc.w * k) + 'px';
+  img.style.height = Math.round(sc.h * k) + 'px';
+  img.style.transform = 'translate(-50%, -50%) rotate(' + sc.rot + 'deg)';
+}
+function drawScan(box, id) {
+  var sc = SCANS[id], inner = box.querySelector('.pv-in');
+  inner.innerHTML = '<div class="stage"><img alt="受給者証" src="' + sc.url + '"></div>';
+  var old = box.querySelector('.pvtools'); if (old) old.remove();
+  box.appendChild(scanTools(id));
+  layoutInline(box);
+  inner.onclick = function () { openViewer(id); };
+}
+function layoutInline(box) {
+  var sc = SCANS[box.getAttribute('data-file')], stage = box.querySelector('.stage');
+  if (!sc || !stage) return;
+  place(stage, stage.querySelector('img'), sc, box.clientWidth, Math.max(240, window.innerHeight * 0.75));
+}
+function scanTools(id, broken) {
+  var sc = SCANS[id] || {}, d = document.createElement('div');
+  var canSave = S.data && S.data.me.admin && !(S.data.fix && S.data.fix.left);
+  d.className = 'pvtools';
+  d.innerHTML = (broken ? '' : '<button class="btn sm" data-a="big">大きく見る</button><button class="btn sm" data-a="rot">↻ 回す</button>' +
+      (canSave && sc.rot !== sc.saved ? '<button class="btn sm solid" data-a="save">この向きで保存</button>' : '')) +
+    '<a class="btn sm" target="_blank" rel="noopener" href="' + esc(pdfView(id)) + '">ドライブで見る</a>' +
+    (sc.pages > 1 ? '<span class="muted">全' + sc.pages + 'ページ。ここには1ページ目を出しています。ほかのページは「ドライブで見る」で。</span>' : '');
+  d.onclick = function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    var a = b.getAttribute('data-a');
+    if (a === 'big') openViewer(id);
+    if (a === 'rot') { sc.rot = (sc.rot + 90) % 360; redrawScans(id); }
+    if (a === 'save') saveRot(id, b);
+  };
+  return d;
+}
+function redrawScans(id) {
+  if (!SCANS[id] || !SCANS[id].url) return;
+  [].forEach.call(document.querySelectorAll('.pv[data-file="' + id + '"]'), function (box) { drawScan(box, id); });
+}
+function saveRot(id, b) {
+  var sc = SCANS[id], rot = sc.rot;
+  b.disabled = true;
+  api('rotateScan', [id, (rot - sc.saved + 360) % 360]).then(function () {
+    sc.saved = rot;
+    toast('ドライブのPDFも、この向きにしました');
+    redrawScans(id);
+  }, function (e) { b.disabled = false; if (e.login) return showLogin(errText(e)); toast(errText(e)); });
+}
+window.addEventListener('resize', function () {
+  [].forEach.call(document.querySelectorAll('.pv[data-file]'), layoutInline);
+  if (V.id) layoutViewer();
+});
+
+// ---------- 大きく見る（画面いっぱい・拡大・回す） ----------
+var V = { id: null, zoom: 1 };
+function openViewer(id) {
+  if (!SCANS[id] || !SCANS[id].url) return;
+  V.id = id; V.zoom = 1;
+  document.getElementById('vImg').src = SCANS[id].url;
+  document.getElementById('viewer').hidden = false;
+  document.body.classList.add('noscroll');
+  try { history.pushState({ v: S.view, id: S.person, viewer: 1 }, ''); } catch (e) {}
+  layoutViewer();
+}
+function closeViewer(fromHistory) {
+  if (!V.id) return;
+  var id = V.id;
+  V.id = null;
+  document.getElementById('viewer').hidden = true;
+  document.body.classList.remove('noscroll');
+  redrawScans(id);
+  if (!fromHistory) { V.skipPop = true; try { history.back(); } catch (e) { V.skipPop = false; } }
+}
+function layoutViewer() {
+  var box = document.getElementById('vBox');
+  place(document.getElementById('vStage'), document.getElementById('vImg'), SCANS[V.id], box.clientWidth, box.clientHeight, V.zoom);
+}
+document.getElementById('vClose').onclick = function () { closeViewer(false); };
+document.getElementById('vRot').onclick = function () { var sc = SCANS[V.id]; sc.rot = (sc.rot + 90) % 360; layoutViewer(); };
+document.getElementById('vIn').onclick = function () { V.zoom = Math.min(V.zoom * 1.5, 6); layoutViewer(); };
+document.getElementById('vOut').onclick = function () { V.zoom = Math.max(V.zoom / 1.5, 1); layoutViewer(); };
+function needCheck(p) { return /[?？]/.test(String(p.name || '') + String(p.kana || '')); }
+var CHECK = '<span class="badge b-check">要確認</span>';
+function isOld(c) { return String(c.state || '').indexOf('旧証') >= 0; }
+function cardOrder(a, b) {
+  if (isOld(a) !== isOld(b)) return isOld(a) ? 1 : -1;
+  return a.expiry < b.expiry ? 1 : a.expiry > b.expiry ? -1 : 0;
+}
+function mainPdf(cards) {
+  for (var i = 0; i < cards.length; i++) if (!isOld(cards[i]) && fileId(cards[i].pdf)) return cards[i].pdf;
+  return '';
+}
+
+// ---------- データ（最初に1回だけ受け取り、あとはブラウザの中で使う） ----------
+function setData(d) {
+  var byId = {}, kids = {}, cardsBy = {}, conBy = {}, actBy = {};
+  function push(map, k, v) { (map[k] = map[k] || []).push(v); }
+  d.persons.forEach(function (p) { byId[p.id] = p; if (p.gid) push(kids, p.gid, p); });
+  d.cards.forEach(function (c) { push(cardsBy, c.id, c); });
+  Object.keys(cardsBy).forEach(function (k) { cardsBy[k].sort(cardOrder); });
+  d.contracts.forEach(function (c) { push(conBy, c.id, c); });
+  d.actions.forEach(function (a) { push(actBy, a.id, a); });
+  d.list = d.persons.map(function (p) {
+    var g = d.guardians[p.gid] || {}, cs = cardsBy[p.id] || [], nos = [];
+    cs.forEach(function (c) { if (c.no && nos.indexOf(c.no) < 0) nos.push(c.no); });
+    return { id: p.id, name: p.name, kana: p.kana, kubun: p.kubun, status: p.status, expiry: p.expiry, state: p.state, check: needCheck(p),
+      gname: g.name || '', gkana: g.kana || '', nos: nos.join(' '), pdf: mainPdf(cs) };
+  });
+  S.data = d;
+  S.idx = { byId: byId, kids: kids, cardsBy: cardsBy, conBy: conBy, actBy: actBy };
+  var me = d.me;
+  document.getElementById('who').innerHTML = esc(me.name) +
+    '<span class="role ' + (me.admin ? 'admin">管理者' : 'user">利用者') + '</span>';
+  var n = d.alerts.filter(function (a) { return a.stage === '期限切れ'; }).length;
+  document.getElementById('alertCount').innerHTML = n ? '<span class="count">' + n + '</span>' : '';
+  stamp(d.at + ' 時点');
+}
+function personData(id) {
+  var p = S.idx.byId[id];
+  if (!p) return null;
+  return {
+    p: p, g: p.gid ? S.data.guardians[p.gid] || null : null,
+    siblings: p.gid ? (S.idx.kids[p.gid] || []).filter(function (o) { return o.id !== id; }) : [],
+    cards: S.idx.cardsBy[id] || [], contracts: S.idx.conBy[id] || [], actions: S.idx.actBy[id] || []
+  };
+}
+function stamp(t) { document.getElementById('stamp').textContent = t; }
+
+/** シートから読み直す（直したあと・右上の ↻ を押したとき）。いまの画面はそのまま。 */
+function refresh() {
+  stamp('読み直し中…');
+  api('bootstrap', [true]).then(function (d) {
+    setData(d);
+    var y = window.scrollY; render(); window.scrollTo(0, y);
+  }, function (e) { if (e.login) return showLogin(errText(e)); stamp('読み直せませんでした'); toast(errText(e)); });
+}
+
+function start() {
+  try { history.replaceState({ v: 'search' }, '', location.pathname); } catch (e) {}   // 前の入口ページの ?launch も消す
+  if (API.indexOf('/*') === 0) return fail('データ係のURLがまだ入っていません。');
+  if (!store.get('rk_token')) return showLogin();
+  document.body.classList.remove('out');
+  document.getElementById('main').innerHTML = '<div class="loading">読み込んでいます…</div>';
+  api('bootstrap', [false]).then(function (d) { setData(d); render(); autoFix(); }, function (e) {
+    if (e.login) return showLogin(errText(e));
+    fail(e);
+  });
+}
+
+// ---------- ログイン（登録したメールに届く6桁のコード） ----------
+function showLogin(msg) {
+  store.del('rk_token');
+  closeViewer(true);
+  S.data = null; SCANS = {};
+  document.body.classList.add('out');
+  var email = store.get('rk_email') || '';
+  var sent = Number(store.get('rk_sent') || 0);
+  var waiting = email && Date.now() - sent < 10 * 60 * 1000;
+  document.getElementById('main').innerHTML = '<div class="login">' +
+    '<img class="licon" src="icon-192.png" alt=""><h1>じょいん 利用者管理</h1>' +
+    (msg ? '<div class="error">' + esc(msg) + '</div>' : '') +
+    '<div class="panel" id="step1"' + (waiting ? ' hidden' : '') + '>' +
+      '<label for="lg_email">登録してあるメールアドレス</label>' +
+      '<input id="lg_email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="example@gmail.com" value="' + esc(email) + '">' +
+      '<button class="btn solid wide" id="lg_send">コードを送る</button>' +
+      '<div class="muted" style="margin-top:8px">このアドレスに6桁のコードがメールで届きます（10分だけ有効）。</div></div>' +
+    '<div class="panel" id="step2"' + (waiting ? '' : ' hidden') + '>' +
+      '<label for="lg_code"><b id="lg_to">' + esc(email) + '</b> に届いた6桁のコード</label>' +
+      '<input id="lg_code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*">' +
+      '<button class="btn solid wide" id="lg_go">ログイン</button>' +
+      '<div class="links"><button class="link" id="lg_again">コードを送り直す</button><button class="link" id="lg_change">アドレスを変える</button></div>' +
+      '<div class="muted" style="margin-top:8px">メールが見つからないときは「迷惑メール」も見てください。一度ログインすると、この端末では90日そのまま使えます。</div></div>' +
+    installHint(false) + '</div>';
+  var send = function (btn) {
+    var v = document.getElementById('lg_email').value.trim();
+    if (!v) return toast('メールアドレスを入れてください');
+    btn.disabled = true;
+    api('sendCode', [], { email: v }).then(function () {
+      store.set('rk_email', v); store.set('rk_sent', String(Date.now()));
+      btn.disabled = false;
+      document.getElementById('lg_to').textContent = v;
+      document.getElementById('step1').hidden = true;
+      document.getElementById('step2').hidden = false;
+      document.getElementById('lg_code').value = '';
+      document.getElementById('lg_code').focus();
+      toast('コードを送りました。メールを見てください');
+    }, function (e) { btn.disabled = false; toast(errText(e)); });
+  };
+  document.getElementById('lg_send').onclick = function () { send(this); };
+  document.getElementById('lg_email').onkeydown = function (e) { if (e.key === 'Enter') send(document.getElementById('lg_send')); };
+  document.getElementById('lg_again').onclick = function () {
+    document.getElementById('step2').hidden = true; document.getElementById('step1').hidden = false;
+    send(document.getElementById('lg_send'));
+  };
+  document.getElementById('lg_change').onclick = function () {
+    store.del('rk_sent');
+    document.getElementById('step2').hidden = true; document.getElementById('step1').hidden = false;
+    document.getElementById('lg_email').focus();
+  };
+  var go = function () {
+    var btn = document.getElementById('lg_go'), code = document.getElementById('lg_code').value;
+    if (!/^\s*[0-9０-９]{6}\s*$/.test(code)) return toast('6桁の数字を入れてください');
+    btn.disabled = true;
+    api('login', [], { email: store.get('rk_email') || '', code: code }).then(function (r) {
+      store.set('rk_token', r.token); store.del('rk_sent');
+      toast(r.name + ' さん、ログインしました');
+      start();
+    }, function (e) { btn.disabled = false; toast(errText(e)); });
+  };
+  document.getElementById('lg_go').onclick = go;
+  document.getElementById('lg_code').onkeydown = function (e) { if (e.key === 'Enter') go(); };
+  document.getElementById('lg_code').oninput = function () { if (/^[0-9]{6}$/.test(this.value)) go(); };
+}
+function logout() {
+  if (!confirm('この端末からログアウトしますか？（次はメールのコードでログインします）')) return;
+  store.del('rk_token');
+  showLogin();
+}
+
+// ---------- ホーム画面に置く案内（アプリとして開いていないときだけ） ----------
+function standalone() {
+  return window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+}
+function installHint(closable) {
+  if (standalone() || (closable && store.get('rk_hint_off'))) return '';
+  var ua = navigator.userAgent;
+  var ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  var t = ios ? 'Safari の共有ボタン（□に↑）→ <b>「ホーム画面に追加」</b> →「追加」。'
+    : /Android/.test(ua) ? 'Chrome の右上︙ → <b>「ホーム画面に追加」</b> →「追加」。'
+    : 'Chrome の右上︙ →「キャスト、保存、共有」→ <b>「ページをアプリとしてインストール」</b>（ない場合は「ショートカットを作成」）→「インストール」（または「作成」）。';
+  return '<div class="hintcard">' + (closable ? '<button class="link" id="hintOff">とじる</button>' : '') +
+    '<b>ホーム画面にアイコンを置く</b>（はじめの1回だけ）<br>この画面のまま、' + t + '紺色の「利用者管理」アイコンができます。</div>';
+}
+
+// ---------- スキャンPDFの向き直し（1回だけ・管理者が開いたときに自動で進める） ----------
+function autoFix(retry) {
+  var f = S.data && S.data.fix;
+  if (!f || !(f.left || retry) || autoFix.running) return;
+  autoFix.running = true;
+  var step = function () {
+    fixLine('受給者証PDFの向きを直しています… ' + f.ok + '/' + f.total + '（このまま使えます）');
+    api('fixScans', [!!retry]).then(function (r) {
+      retry = false;
+      f = S.data.fix = r;
+      if (r.left) return step();
+      autoFix.running = false;
+      SCANS = {};
+      fixLine(r.failed.length ? '向きを直しました（' + r.ok + '/' + r.total + '）。直せなかったファイルが ' + r.failed.length + ' 件あります。' : '', r.failed.length > 0);
+      toast('受給者証PDFの向きを直しました（' + r.ok + '/' + r.total + '）');
+      render();
+    }, function (e) {
+      autoFix.running = false;
+      if (e.login) return showLogin(errText(e));
+      fixLine('向き直しは途中です（' + f.ok + '/' + f.total + '）。' + errText(e), true);
+    });
+  };
+  step();
+}
+/** 管理者の一覧の上に出す、向き直しのお知らせ。again=true なら「もう一度ためす」も出す。 */
+function fixLine(t, again) {
+  S.fixText = t; S.fixAgain = !!again;
+  var el = document.getElementById('fixbar');
+  if (el) fixBar(el);
+}
+function fixBar(el) {
+  el.hidden = !S.fixText;
+  el.textContent = S.fixText || '';
+  if (!S.fixAgain) return;
+  var b = document.createElement('button');
+  b.className = 'link'; b.textContent = 'もう一度ためす';
+  b.onclick = function () { b.disabled = true; autoFix(true); };
+  el.appendChild(document.createTextNode(' '));
+  el.appendChild(b);
+}
+
+// ---------- 画面の切り替え（スマホの「戻る」でも戻れるよう、ブラウザの履歴にも残す） ----------
+document.getElementById('tabs').addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  go(b.getAttribute('data-v'));
+});
+document.getElementById('reload').addEventListener('click', refresh);
+
+function go(view, id, fromHistory) {
+  if (S.view !== 'person') S.scroll[S.view] = window.scrollY;
+  if (view === 'person' && S.view !== 'person') S.from = S.view;
+  S.restore = view !== 'person' && S.view === 'person';
+  S.view = view; S.person = id || null;
+  if (!fromHistory) { try { history.pushState({ v: view, id: id || '' }, ''); } catch (e) {} }
+  render();
+}
+function back() { go(S.from || 'search'); }
+// スマホの「戻る」操作でも同じように戻れるようにする（大きく見ている画像は先にとじる）
+window.addEventListener('popstate', function (e) {
+  if (V.skipPop) { V.skipPop = false; return; }
+  if (V.id) return closeViewer(true);
+  if (!S.data) return;
+  var st = e.state || {};
+  go(st.v || 'search', st.id || null, true);
+});
+
+function render() {
+  if (!S.data) return;
+  [].forEach.call(document.querySelectorAll('#tabs button'), function (b) {
+    b.classList.toggle('on', b.getAttribute('data-v') === (S.view === 'person' ? S.from : S.view));
+  });
+  if (S.view === 'person') {
+    var d = personData(S.person);
+    if (d) { drawPerson(d); window.scrollTo(0, 0); return; }
+    S.view = 'search';
+  }
+  if (S.view === 'alert') renderAlerts(); else renderSearch();
+  window.scrollTo(0, S.restore ? (S.scroll[S.view] || 0) : 0);
+  S.restore = false;
+}
+
+// ---------- さがす ----------
+function renderSearch() {
+  var chips = ['すべて', '期限切れ', '1か月以内', '利用中', '未確認', '要確認'];
+  document.getElementById('main').innerHTML =
+    '<div class="fixbar" id="fixbar"' + (S.fixText ? '' : ' hidden') + '>' + esc(S.fixText || '') + '</div>' + installHint(true) +
+    '<input class="search" id="q" type="search" placeholder="名前・ふりがな・受給者証番号・保護者名" value="' + esc(S.q) + '">' +
+    '<div class="chips">' + chips.map(function (c) {
+      return '<button class="chip' + (S.filter === c ? ' on' : '') + '" data-f="' + c + '">' + c + '</button>';
+    }).join('') + '</div><div class="hint" id="hint"></div><div id="list"></div>' +
+    '<div class="foot">' + esc(S.data.me.name) + '（' + esc(S.data.me.email) + '）でログイン中　<button class="link" id="logout">ログアウト</button></div>';
+  document.getElementById('logout').onclick = logout;
+  fixBar(document.getElementById('fixbar'));
+  var off = document.getElementById('hintOff');
+  if (off) off.onclick = function () { store.set('rk_hint_off', '1'); off.parentNode.remove(); };
+  var q = document.getElementById('q');
+  q.addEventListener('input', function () { S.q = q.value; drawList(); });
+  document.querySelector('.chips').addEventListener('click', function (e) {
+    var b = e.target.closest('.chip'); if (!b) return;
+    S.filter = b.getAttribute('data-f'); renderSearch();
+  });
+  drawList();
+}
+function drawList() {
+  var key = norm(S.q);
+  var rows = S.data.list.filter(function (p) {
+    if (S.filter === '要確認') { if (!p.check) return false; }
+    else if (S.filter === '期限切れ' || S.filter === '1か月以内') { if (p.state !== S.filter) return false; }
+    else if (S.filter !== 'すべて' && p.status !== S.filter) return false;
+    if (!key) return true;
+    return norm([p.id, p.name, p.kana, p.gname, p.gkana, p.nos].join(' ')).indexOf(key) >= 0;
+  }).sort(function (a, b) { return norm(a.kana || a.name).localeCompare(norm(b.kana || b.name), 'ja'); });
+  document.getElementById('hint').textContent = rows.length + '人';
+  document.getElementById('list').innerHTML = rows.map(function (p) {
+    return '<div class="item" data-id="' + esc(p.id) + '"><div class="main"><div class="nm">' + esc(p.name) +
+      (p.check ? CHECK : '') + (p.pdf ? '<span class="pdfmark">証</span>' : '') +
+      '</div><div class="kn">' + esc(p.kana) + '　' + esc(p.id) + (p.kubun === '大人' ? '　大人' : '') + '</div></div>' +
+      '<div class="side">' + badge(p.state) + '<br>' + esc(p.expiry) + '</div></div>';
+  }).join('') || '<div class="muted">見つかりません。</div>';
+  bindItems();
+}
+function bindItems() {
+  [].forEach.call(document.querySelectorAll('.item[data-id]'), function (el) {
+    el.addEventListener('click', function () { go('person', el.getAttribute('data-id')); });
+  });
+}
+
+// ---------- 期限 ----------
+function renderAlerts() {
+  var groups = ['期限切れ', '1か月以内', '2か月以内'];
+  var a = S.data.alerts;
+  document.getElementById('main').innerHTML =
+    '<div class="hint">旧い証を除き、期限が切れている受給者証と2か月以内に切れる受給者証です（' + esc(S.data.today) + ' 時点）。</div>' +
+    groups.map(function (g) {
+      var rows = a.filter(function (x) { return x.stage === g; });
+      return '<h2 class="group-h"><span>' + g + '</span><span class="muted">' + rows.length + '枚</span></h2>' +
+        (rows.map(function (x) {
+          return '<div class="item" data-id="' + esc(x.id) + '"><div class="main"><div class="nm">' + esc(x.name) +
+            '</div><div class="kn">' + esc(x.kind) + '　' + esc(x.no) + '</div></div><div class="side">' + esc(x.expiry) +
+            '<br>' + (x.last === '未対応' ? '<span class="badge b-期限切れ">未対応</span>' : '<span class="badge b-有効">' + esc(x.last) + '</span>') +
+            '</div></div>';
+        }).join('') || '<div class="muted">ありません。</div>');
+    }).join('');
+  bindItems();
+}
+
+// ---------- 1人の画面（押した瞬間に出る） ----------
+function field(label, value) {
+  return value ? '<dt>' + esc(label) + '</dt><dd>' + esc(value) + '</dd>' : '';
+}
+function drawPerson(d) {
+  var admin = S.data.me.admin, p = d.p, g = d.g;
+  var cur = d.cards.filter(function (c) { return !isOld(c); });
+  var old = d.cards.filter(isOld);
+  var pdf = mainPdf(d.cards);
+  var h = '<button class="back" id="backBtn">← もどる</button>' +
+    '<div class="panel" id="personPanel"><div class="card-h"><div><div class="pname' + (pdf ? ' link" id="pname" title="受給者証を見る' : '') + '">' + esc(p.name) +
+    (needCheck(p) ? CHECK : '') + '</div><div class="pkana">' + esc(p.kana) + '　' + esc(p.id) + '</div></div><div>' + badge(p.state) +
+    (admin ? ' <button class="btn sm" id="editP">修正</button>' : '') + '</div></div>';
+  if (pdf) {
+    h += '<div class="pvbar"><button class="btn solid" id="pvToggle">' + (S.pdfOpen ? '受給者証をとじる' : '受給者証を見る') + '</button>' +
+      '</div>' +
+      '<div id="pvTop">' + (S.pdfOpen ? pdfFrame(pdf) : '') + '</div>';
+  } else {
+    h += '<div class="muted" style="margin-top:6px">受給者証のPDFはまだつないでいません。</div>';
+  }
+  h += '<dl style="margin-top:10px">' +
+    field('生年月日', p.birth) + field('区分', p.kubun) + field('利用の状態', p.status) +
+    field('利用開始日', p.start) + field('利用終了日', p.end) + field('いちばん近い期限', p.expiry) + field('備考', p.note) + '</dl>';
+  if (d.siblings.length) {
+    h += '<div class="act">きょうだい：' + d.siblings.map(function (s) {
+      return '<span class="sib" data-id="' + esc(s.id) + '">' + esc(s.name) + '</span>';
+    }).join('') + '</div>';
+  }
+  h += '</div>';
+
+  h += '<h2>受給者証</h2><div class="cards2">' + (cur.map(function (c) { return cardHtml(c, admin); }).join('') || '<div class="muted">ありません。</div>') + '</div>';
+  if (old.length) h += '<details><summary>旧い証（' + old.length + '枚）</summary><div class="cards2">' + old.map(function (c) { return cardHtml(c, admin); }).join('') + '</div></details>';
+
+  h += '<h2>保護者</h2><div class="panel" id="guardPanel">' + (g && admin ? '<div class="edit-h"><span></span><button class="btn sm" id="editG">修正</button></div>' : '') + (g ? '<dl>' + field('氏名', g.name) + field('ふりがな', g.kana) + field('続柄', g.rel) +
+    field('電話', g.tel) + field('メール', g.mail) + field('居住地', g.address) + field('備考', g.note) + '</dl>' : '<div class="muted">登録なし</div>') + '</div>';
+
+  h += '<h2>利用契約</h2>' + (d.contracts.map(function (c) {
+    return '<div class="panel"><dl>' + field('契約番号', c.no) + field('サービス', c.service) + field('契約日', c.date) +
+      field('契約支給量', c.amount) + field('利用曜日', c.days) + field('送迎', c.ride) + field('契約終了日', c.end) +
+      field('受給者証番号', c.cardNo) + field('備考', c.note) + '</dl>' +
+      (c.pdf ? '<div style="margin-top:8px"><a class="btn" target="_blank" rel="noopener" href="' + esc(c.pdf) + '">契約書PDFを開く</a></div>' : '') + '</div>';
+  }).join('') || '<div class="muted panel">まだ登録されていません。</div>');
+
+  h += '<h2>期限の対応の記録</h2><div class="panel">' + (d.actions.map(function (a) {
+    return '<div class="act"><b>' + esc(a.date) + '</b>　' + esc(a.what) + '（' + esc(a.who) + '）<br><span class="muted">' +
+      esc(a.no) + (a.memo ? '　' + esc(a.memo) : '') + '</span></div>';
+  }).join('') || '<div class="muted">まだありません。</div>') + '</div>';
+
+  if (admin) h += adminHtml(d);
+  var main = document.getElementById('main');
+  main.innerHTML = h;
+  document.getElementById('backBtn').onclick = back;
+  if (pdf) {
+    var toggle = function () {
+      S.pdfOpen = !S.pdfOpen;
+      document.getElementById('pvTop').innerHTML = S.pdfOpen ? pdfFrame(pdf) : '';
+      document.getElementById('pvToggle').textContent = S.pdfOpen ? '受給者証をとじる' : '受給者証を見る';
+      fillScans(document.getElementById('pvTop'));
+    };
+    document.getElementById('pvToggle').onclick = toggle;
+    document.getElementById('pname').onclick = toggle;
+  }
+  [].forEach.call(main.querySelectorAll('.pvc'), function (b) {
+    b.onclick = function () {
+      var slot = b.parentNode.nextElementSibling, open = !slot.innerHTML;
+      slot.innerHTML = open ? pdfFrame(b.getAttribute('data-pdf')) : '';
+      b.textContent = open ? 'とじる' : 'ここで見る';
+      fillScans(slot);
+    };
+  });
+  [].forEach.call(main.querySelectorAll('.sib'), function (el) {
+    el.addEventListener('click', function () { go('person', el.getAttribute('data-id')); });
+  });
+  if (admin) { bindAdmin(d); bindEdits(d); }
+  fillScans(main);
+}
+function cardHtml(c, admin) {
+  var has = !!fileId(c.pdf);
+  return '<div class="panel" data-card="' + esc(c.tab + ':' + c.row) + '"><div class="card-h"><b>' + esc(c.kind) + '</b><span>' + badge(c.state) +
+    (admin ? ' <button class="btn sm editC">修正</button>' : '') + '</span></div><dl>' +
+    field('受給者証番号', c.no) + field('支給市町村', c.city) + field('支援の種類', c.service) + field('支給量', c.amount) +
+    field('支援の種類②', c.service2) + field('支給量②', c.amount2) + field('決定期間', (c.from || c.to) ? c.from + ' 〜 ' + c.to : '') +
+    field('有効期限', c.expiry) + field('負担上限月額', c.cap) + field('上限額の期間', c.capTo ? '〜 ' + c.capTo : '') +
+    field('上限管理事業所', c.capOffice) + field('相談支援事業所', c.soudan) + field('備考', c.note) + '</dl>' +
+    '<div class="pvbar">' + (has ? '<button class="btn pvc" data-pdf="' + esc(c.pdf) + '">ここで見る</button>'
+      : '<span class="muted">PDFはまだつないでいません</span>') + '</div><div class="pvslot"></div></div>';
+}
+
+// ---------- 管理者だけ ----------
+function opt(list, v) {
+  return list.map(function (x) { return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
+}
+function adminHtml(d) {
+  var p = d.p, g = d.g || {};
+  var cardNos = d.cards.filter(function (c) { return !isOld(c); }).map(function (c) { return c.no; });
+  return '<h2>記録する・足す（管理者）</h2>' +
+    '<details class="panel"><summary>期限の対応を記録する</summary><div class="form">' +
+      '<div><label>受給者証番号</label><select id="a_no">' + opt(cardNos, cardNos[0]) + '</select></div>' +
+      '<div><label>対応内容</label><select id="a_what"><option value="">選んでください</option>' + opt(S.data.choices, '') + '</select></div>' +
+      '<div><label>メモ（任意）</label><input id="a_memo"></div>' +
+      '<div><button class="btn solid" id="a_save">記録する</button></div></div></details>' +
+    '<details class="panel"><summary>利用契約を足す</summary><div class="form wide">' +
+      '<div><label>サービス</label><select id="c_service">' + opt(['放課後等デイサービス', '児童発達支援', 'その他'], '放課後等デイサービス') + '</select></div>' +
+      '<div><label>受給者証番号</label><select id="c_card">' + opt(cardNos, cardNos[0]) + '</select></div>' +
+      '<div class="row2"><div><label>契約日</label><input id="c_date" placeholder="2026/11/01"></div>' +
+      '<div><label>契約支給量</label><input id="c_amount" placeholder="月23日"></div></div>' +
+      '<div class="row2"><div><label>利用曜日</label><input id="c_days" placeholder="月・水・金"></div>' +
+      '<div><label>送迎</label><select id="c_ride">' + opt(['行き帰りあり', '行きのみ', '帰りのみ', 'なし'], '行き帰りあり') + '</select></div></div>' +
+      '<div><label>備考</label><input id="c_note"></div>' +
+      '<div><button class="btn solid" id="c_save">足す</button></div></div></details>';
+}
+// ---------- 修正（管理者だけ） ----------
+var STATUS = ['未確認', '利用中', '契約前', '休止中', '終了'];
+var P_FIELDS = [
+  { k: '氏名', v: 'name' }, { k: 'ふりがな', v: 'kana' }, { k: '生年月日', v: 'birth', ph: '平成25年12月14日' },
+  { k: '区分', v: 'kubun', opts: ['児童', '大人'] }, { k: '利用の状態', v: 'status', opts: STATUS },
+  { k: '利用開始日', v: 'start', ph: '2026/11/01' }, { k: '利用終了日', v: 'end' }, { k: '備考', v: 'note', area: true }];
+var G_FIELDS = [
+  { k: '氏名', v: 'name' }, { k: 'ふりがな', v: 'kana' }, { k: '続柄', v: 'rel', ph: '母・父など' },
+  { k: '電話', v: 'tel', type: 'tel' }, { k: 'メール', v: 'mail', type: 'email' },
+  { k: '居住地（受給者証の記載）', v: 'address', label: '居住地' }, { k: '備考', v: 'note', area: true }];
+var C_FIELDS = [
+  { k: 'no', label: '受給者証番号', mode: 'numeric' }, { k: 'city', label: '支給市町村' },
+  { k: 'service', label: '支援の種類' }, { k: 'amount', label: '支給量' },
+  { k: 'from', label: '決定期間（から）', ph: '令和8年4月1日' }, { k: 'to', label: '決定期間（まで）', ph: '令和9年3月31日' },
+  { k: 'service2', label: '支援の種類②' }, { k: 'amount2', label: '支給量②' },
+  { k: 'expiry', label: '有効期限', date: true }, { k: 'cap', label: '負担上限月額', ph: '4,600円' },
+  { k: 'capTo', label: '上限額の期間（まで）' }, { k: 'capOffice', label: '上限管理事業所' },
+  { k: 'soudan', label: '相談支援事業所' }, { k: 'note', label: '備考', area: true }];
+function editForm(fields, obj, note) {
+  return '<div class="edit-note">' + esc(note) + '</div><div class="form wide">' + fields.map(function (f, i) {
+    var v = obj[f.v || f.k] || '', id = 'ef' + i, lab = '<label for="' + id + '">' + esc(f.label || f.k) + '</label>';
+    if (f.opts) {
+      var list = f.opts.indexOf(v) < 0 && v ? [v].concat(f.opts) : f.opts;
+      return '<div>' + lab + '<select id="' + id + '">' + opt(list, v) + '</select></div>';
+    }
+    if (f.area) return '<div>' + lab + '<textarea id="' + id + '">' + esc(v) + '</textarea></div>';
+    if (f.date) return '<div>' + lab + '<input id="' + id + '" type="date" value="' + esc(String(v).replace(/\//g, '-')) + '"></div>';
+    return '<div>' + lab + '<input id="' + id + '"' + (f.type ? ' type="' + f.type + '"' : '') + (f.mode ? ' inputmode="' + f.mode + '"' : '') +
+      (f.ph ? ' placeholder="' + esc(f.ph) + '"' : '') + ' value="' + esc(v) + '"></div>';
+  }).join('') + '</div><div class="pvbar"><button class="btn solid" id="efSave">保存する</button><button class="btn" id="efCancel">やめる</button></div>';
+}
+/** 変わった項目だけを { 項目: 新しい値 } にする */
+function changed(fields, obj) {
+  var out = {}, n = 0;
+  fields.forEach(function (f, i) {
+    var el = document.getElementById('ef' + i); if (!el) return;
+    var now = f.date ? el.value.replace(/-/g, '/') : el.value.trim();
+    if (now !== String(obj[f.v || f.k] || '')) { out[f.k] = now; n++; }
+  });
+  return n ? out : null;
+}
+function openEdit(box, fields, obj, note, save) {
+  if (document.getElementById('efSave')) return toast('いま開いている修正を、先に保存するか「やめる」を押してください');
+  box.innerHTML = editForm(fields, obj, note);
+  box.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  document.getElementById('efCancel').onclick = function () { render(); };
+  document.getElementById('efSave').onclick = function () {
+    var ch = changed(fields, obj);
+    if (!ch) return toast('変わったところはありません');
+    this.disabled = true; stamp('保存中…');
+    save(ch);
+  };
+}
+function saved(n) { toast(n ? n + 'か所を直しました' : '変わったところはありません'); refresh(); }
+function bindEdits(d) {
+  var id = d.p.id, b = document.getElementById('editP');
+  if (b) b.onclick = function () {
+    openEdit(document.getElementById('personPanel'), P_FIELDS, d.p, '「利用者」の表を直します。直した内容は「更新履歴」に残ります。',
+      function (ch) { call('savePerson', [id, ch, '', null], saved); });
+  };
+  b = document.getElementById('editG');
+  if (b) b.onclick = function () {
+    openEdit(document.getElementById('guardPanel'), G_FIELDS, d.g, '「保護者」の表を直します。きょうだいの画面にも反映されます。',
+      function (ch) { call('savePerson', [id, {}, d.g.id, ch], saved); });
+  };
+  [].forEach.call(document.querySelectorAll('.editC'), function (btn) {
+    btn.onclick = function () {
+      var box = btn.closest('[data-card]'), key = box.getAttribute('data-card');
+      var c = d.cards.filter(function (x) { return x.tab + ':' + x.row === key; })[0];
+      if (!c) return;
+      openEdit(box, C_FIELDS, c, '元の一覧表（' + (c.tab === 'adult' ? '障害福祉サービス受給者証一覧' : '受給者証一覧') +
+        '）の同じ行を直します。有効期限を直すと、期限の状態と期限一覧も自動で変わります。',
+        function (ch) { call('saveCard', [id, c.tab, c.row, c.no, ch], saved); });
+    };
+  });
+}
+function val(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+function bindAdmin(d) {
+  var id = d.p.id;
+  document.getElementById('a_save').onclick = function () {
+    if (!val('a_what')) return toast('対応内容を選んでください');
+    this.disabled = true; stamp('保存中…');
+    call('addAction', [id, val('a_no'), val('a_what'), val('a_memo')], function () { toast('記録しました'); refresh(); });
+  };
+  document.getElementById('c_save').onclick = function () {
+    if (!val('c_date')) return toast('契約日を入れてください');
+    this.disabled = true; stamp('保存中…');
+    call('addContract', [id, { service: val('c_service'), cardNo: val('c_card'), date: val('c_date'), amount: val('c_amount'),
+      days: val('c_days'), ride: val('c_ride'), note: val('c_note') }], function (no) { toast(no + ' を足しました'); refresh(); });
+  };
+}
+
+start();
 </script>
 </body>
 </html>
