@@ -149,6 +149,24 @@ body.out #tabs, body.out .tools { display: none; }
 // データ係（江島さんの Google アカウントで動くスクリプト）。個人のデータはここからだけ届き、このページには置かない。
 var API = 'https://script.google.com/macros/s/AKfycbxF1LZbOPRPZChjpP7WFMp2-fw2530a3y15T4kKyUzK47qmh2ucVJ6nodvXC5L-_PXm9Q/exec';
 var OLD_APP = 'https://script.google.com/macros/s/AKfycbzNVFoB3peaDUPW1hWqQNdozJGvt0tioCjECcSoMiJsK9x5ZMyRL2TQnCVj0W9a0dLlCQ/exec';
+var PAGE_VER = '5d48e42b02';   // この画面の版。公開されている版とちがえば、画面を読み直して新しい版にする
+
+/**
+ * 画面の新しい版が公開されていれば読み直す（ホーム画面のアイコンから開くと、ブラウザの読み直しボタンがないため）。
+ * 右上の ↻ を押したときと、アプリに戻ってきたとき（5分に1回まで）に確かめる。直している途中の画面では読み直さない。
+ */
+function checkUpdate(force) {
+  if (!force && Date.now() - (checkUpdate.at || 0) < 5 * 60 * 1000) return;
+  checkUpdate.at = Date.now();
+  fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store', credentials: 'omit' }).then(function (r) { return r.text(); }).then(function (t) {
+    var m = t.match(/var PAGE_VER = '([^']+)'/);
+    if (!m || m[1] === PAGE_VER || m[1].indexOf('/*') === 0) return;
+    if (document.getElementById('efSave') || autoFix.running) return;
+    try { if (sessionStorage.getItem('rk_reload_for') === m[1]) return; sessionStorage.setItem('rk_reload_for', m[1]); } catch (e) {}
+    location.reload();
+  }).catch(function () {});
+}
+document.addEventListener('visibilitychange', function () { if (!document.hidden) checkUpdate(false); });
 var S = { data: null, idx: null, view: 'search', q: '', filter: 'すべて', person: null, from: 'search', scroll: {}, restore: false, pdfOpen: true };
 
 /** この端末に覚えておくもの（ログインの合言葉とメールアドレスだけ）。 */
@@ -404,6 +422,7 @@ function stamp(t) { document.getElementById('stamp').textContent = t; }
 
 /** シートから読み直す（直したあと・右上の ↻ を押したとき）。いまの画面はそのまま。 */
 function refresh() {
+  checkUpdate(true);
   stamp('読み直し中…');
   api('bootstrap', [true]).then(function (d) {
     setData(d);
@@ -417,7 +436,7 @@ function start() {
   if (!store.get('rk_token')) return showLogin();
   document.body.classList.remove('out');
   document.getElementById('main').innerHTML = '<div class="loading">読み込んでいます…</div>';
-  api('bootstrap', [false]).then(function (d) { setData(d); render(); autoFix(); }, function (e) {
+  api('bootstrap', [false]).then(function (d) { setData(d); render(); autoFix(); checkUpdate(true); }, function (e) {
     if (e.login) return showLogin(errText(e));
     fail(e);
   });
