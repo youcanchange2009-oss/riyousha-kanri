@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>利用者管理</title>
+<meta name="apple-mobile-web-app-title" content="利用者管理">
+<meta name="application-name" content="利用者管理">
+<meta name="theme-color" content="#1f3a70">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="manifest" href="manifest.json">
+<script>
+// 利用者管理（Google のウェブアプリ）への入口。ホーム画面・Dock のアイコンをこのページで持つ。
+var APP = 'https://script.google.com/macros/s/AKfycbzNVFoB3peaDUPW1hWqQNdozJGvt0tioCjECcSoMiJsK9x5ZMyRL2TQnCVj0W9a0dLlCQ/exec';
+(function () {
+  var standalone = window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  var nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
+  var cameBack = nav.type === 'back_forward';
+  // ホーム画面のアイコンから開いたとき（URL に ?launch が付く）は、すぐに画面へ進む
+  if (standalone || (/[?&]launch\b/.test(location.search) && !cameBack)) {
+    location.replace(APP);
+    return;
+  }
+  // 初めて開いたときは、この画面のまま「ホーム画面に追加」してもらう。追加されるURLに ?launch を付けておく
+  try { history.replaceState(null, '', location.pathname + '?launch'); } catch (e) {}
+})();
+window.addEventListener('pageshow', function (e) { if (e.persisted) document.body.classList.add('back'); });
+</script>
+<style>
+  :root { --navy: #1f3a70; --ink: #1d2433; --sub: #5b6475; --line: #dfe4ee; --bg: #f4f6fa; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", sans-serif;
+    -webkit-text-size-adjust: 100%; }
+  main { max-width: 440px; margin: 0 auto; padding: 32px 16px 40px; text-align: center; }
+  .icon { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 4px 14px rgba(31,58,112,.25); }
+  h1 { font-size: 22px; margin: 16px 0 4px; }
+  .lead { color: var(--sub); font-size: 14px; margin: 0 0 24px; }
+  .open { display: block; width: 100%; padding: 16px; border-radius: 12px; background: var(--navy); color: #fff;
+    font-size: 18px; font-weight: 700; text-decoration: none; }
+  .card { margin-top: 24px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; text-align: left; }
+  .card h2 { font-size: 15px; margin: 0 0 8px; }
+  .card p { font-size: 14px; line-height: 1.7; margin: 6px 0; }
+  .card b { color: var(--navy); }
+  .hide { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <img class="icon" src="icon-192.png" alt="">
+  <h1>じょいん 利用者管理</h1>
+  <p class="lead">ご自分のGoogleでログインして使います</p>
+  <a class="open" id="open" href="">利用者管理を開く</a>
+
+  <div class="card">
+    <h2>ホーム画面にアイコンを置く（はじめの1回だけ）</h2>
+    <p class="ios">この画面のまま、Safari の共有ボタン（□に↑）→ <b>「ホーム画面に追加」</b> →「追加」。</p>
+    <p class="android hide">この画面のまま、Chrome の右上︙ → <b>「ホーム画面に追加」</b> →「追加」。</p>
+    <p class="pc hide">この画面のまま、Chrome の右上︙ →「キャスト、保存、共有」→ <b>「ショートカットを作成」</b> →「ウィンドウとして開く」にチェック →「作成」。Mac は開いている間に Dock のアイコンを右クリック →「オプション」→「Dockに追加」。</p>
+    <p>紺色の「利用者管理」アイコンができます。次からはそのアイコンを押すと、すぐ画面が開きます。</p>
+  </div>
+</main>
+<script>
+  document.getElementById('open').href = APP;
+  var ua = navigator.userAgent;
+  var kind = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'ios'
+    : /Android/.test(ua) ? 'android' : 'pc';
+  ['ios', 'android', 'pc'].forEach(function (k) {
+    document.querySelector('.' + k).classList.toggle('hide', k !== kind);
+  });
+</script>
+</body>
+</html>
